@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Task List</title>
+    <style>
+        /* Your existing styles */
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            padding: 20px;
+        }
+
+        .container {
+            width: 80%;
+            margin: 0 auto;
+            max-width: 1200px;
+        }
+
+        .task-list {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 40px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .completed-tasks {
+            background: #eaf4e4;
+            border: 1px solid #d0e1d6;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .task-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 5px;
+            background: #f9f9f9;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            transition: background 0.3s;
+        }
+
+        .task-row:hover {
+            background: #e0e0e0;
+        }
+
+        .task-row input[type="checkbox"] {
+            margin-right: 15px;
+            cursor: pointer;
+        }
+
+        .task-row input[type="text"] {
+            flex-grow: 1;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 8px;
+            font-size: 16px;
+            color: #333;
+        }
+
+        .task-row .delete-btn {
+            cursor: pointer;
+            color: #e74c3c;
+            font-weight: bold;
+            margin-left: 15px;
+            font-size: 18px;
+        }
+
+        .add-task-btn, .submit-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            color: #fff;
+            background-color: #3498db;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+
+        .add-task-btn:hover, .submit-btn:hover {
+            background-color: #2980b9;
+        }
+
+        .completed-tasks input[type="text"] {
+            background: #d9f7d9;
+            border: 1px solid #a8dba8;
+            color: #2e6e2e;
+        }
+
+        .task-heading {
+            font-size: 20px;
+            margin-bottom: 10px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>To-Do Application</h1>
+
+    <div id="task-list" class="task-list">
+        <h2 class="task-heading">Tasks</h2>
+        <!-- Existing tasks from the database will be loaded here -->
+    </div>
+      
+    <button type="button" class="add-task-btn" onclick="addTask()">+ Add Task</button>
+    <button type="button" class="submit-btn" onclick="submitForm()">Save Task List</button>
+
+    <div id="completed-tasks" class="completed-tasks">
+        <h2 class="task-heading">Completed Tasks</h2>
+        <!-- Completed tasks will be loaded here -->
+    </div>
+
+</div>
+
+<script>
+    let existingTasks = [];
+
+    document.addEventListener("DOMContentLoaded", function() {
+        fetchTasks();
+    });
+
+    function fetchTasks() {
+        fetch('/getAllTask')
+            .then(response => response.json())
+            .then(tasks => {
+                existingTasks = tasks; // Save existing tasks
+                tasks.forEach(task => {
+                    if (task.status) {
+                        addCompletedTask(task.id, task.description);
+                    } else {
+                        addTask(task.id, task.description, task.status);
+                    }
+                });
+            })
+            .catch(error => console.error('Error fetching tasks:', error));
+    }
+
+    function addTask(id = null, description = "", status = false) {
+        const taskRow = document.createElement("div");
+        taskRow.className = "task-row";
+        taskRow.dataset.id = id; // Store ID in data attribute
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.name = "completed";
+        checkbox.checked = status;
+        checkbox.onchange = function() {
+            updateTaskStatus(id, checkbox.checked, taskRow);
+        };
+
+        const label = document.createElement("input");
+        label.type = "text";
+        label.name = "name";
+        label.placeholder = "Enter task name";
+        label.value = description;
+
+        const deleteBtn = document.createElement("span");
+        deleteBtn.className = "delete-btn";
+        deleteBtn.textContent = "×";
+        deleteBtn.onclick = function() {
+            deleteTask(id, taskRow);
+        };
+
+        taskRow.appendChild(checkbox);
+        taskRow.appendChild(label);
+        taskRow.appendChild(deleteBtn);
+
+        document.getElementById("task-list").appendChild(taskRow);
+    }
+
+    function addCompletedTask(id, description) {
+        const taskRow = document.createElement("div");
+        taskRow.className = "task-row";
+        taskRow.dataset.id = id; // Store ID in data attribute
+
+        const label = document.createElement("input");
+        label.type = "text";
+        label.name = "name";
+        label.placeholder = "Completed task";
+        label.value = description;
+        label.disabled = true; // Make completed task labels read-only
+
+        const deleteBtn = document.createElement("span");
+        deleteBtn.className = "delete-btn";
+        deleteBtn.textContent = "×";
+        deleteBtn.onclick = function() {
+            deleteTask(id, taskRow, true);
+        };
+
+        taskRow.appendChild(label);
+        taskRow.appendChild(deleteBtn);
+
+        document.getElementById("completed-tasks").appendChild(taskRow);
+    }
+
+    function updateTaskStatus(id, status, taskRow) {
+        if (id !== null) {
+            fetch(`/editTask/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ status: status })
+            })
+            .then(response => {
+                if (response.ok) {
+                    if (status) {
+                        // Move task to completed section
+                        addCompletedTask(id, taskRow.querySelector('input[type="text"]').value);
+                        taskRow.remove();
+                    }
+                } else {
+                    console.error('Error updating task status:', response.statusText);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+    }
+
+    function deleteTask(id, taskRow, isCompleted = false) {
+        if (id !== null) { // Only attempt to delete if the task has an ID
+            fetch(`/deleteTask/${id}`, {
+                method: 'DELETE'
+            })
+            .then(response => {
+                if (response.ok) {
+                    taskRow.remove(); // Remove task from the DOM if deletion is successful
+                } else {
+                    console.error('Error deleting task:', response.statusText);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        } else {
+            // For tasks without ID (i.e., newly added tasks), just remove from the DOM
+            taskRow.remove();
+        }
+    }
+
+    function submitForm() {
+        const tasks = [];
+        const taskRows = document.querySelectorAll("#task-list .task-row");
+
+        taskRows.forEach(row => {
+            const task = {
+                id: row.dataset.id || null, // Include task ID if available
+                description: row.querySelector('input[type="text"]').value,
+                status: row.querySelector('input[type="checkbox"]').checked
+            };
+            tasks.push(task);
+        });
+
+        // Determine newly added tasks
+        const newTasks = tasks.filter(task => {
+            return !existingTasks.some(existingTask => 
+                existingTask.description === task.description && 
+                existingTask.status === task.status
+            );
+        });
+
+        fetch('/addTask', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(newTasks)
+        })
+        .then(response => {
+            if (response.ok) {
+                window.location.href = "/";
+            } else {
+                console.error('Error:', response.statusText);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+</script>
+
+</body>
+</html>

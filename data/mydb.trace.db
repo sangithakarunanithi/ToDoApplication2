@@ -1,0 +1,5 @@
+2024-08-14 21:20:36.338624+05:30 jdbc[13]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Syntax error in SQL statement "SELECT * FROM TODO_LIST \000d\000a\000d\000adelete [*]from todo_list"; SQL statement:
+SELECT * FROM TODO_LIST 
+
+delete from todo_list [42000-224]
