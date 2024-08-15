@@ -24,10 +24,10 @@ public class TodoListService {
 
 	public List<TodoList> addTask(List<TodoList> todoList) {
 		List<TodoList> result  = new ArrayList<TodoList>();
-		for(TodoList eachlist : todoList) {
+		for(TodoList task : todoList) {
 			TodoList list = new TodoList();
-			list.setDescription(eachlist.getDescription());
-			list.setStatus(eachlist.isStatus());
+			list.setDescription(task.getDescription());
+			list.setStatus(task.isStatus());
 			result.add(todoListRepository.save(list));
 		}
 		return result;	
